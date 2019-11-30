@@ -21,15 +21,17 @@ GT honor code violation.
   		   	  			  	 		  		  		    	 		 		   		 		  
 -----do not edit anything above this line---  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
-Student Name: Tucker Balch (replace with your name)  		   	  			  	 		  		  		    	 		 		   		 		  
-GT User ID: tb34 (replace with your User ID)  		   	  			  	 		  		  		    	 		 		   		 		  
-GT ID: 900897987 (replace with your GT ID)  		   	  			  	 		  		  		    	 		 		   		 		  
+Student Name: Jie Lyu  		   	  			  	 		  		  		    	 		 		   		 		  
+GT User ID: jlyu31  		   	  			  	 		  		  		    	 		 		   		 		  
+GT ID: 903329676  		   	  			  	 		  		  		    	 		 		   		 		  
 """  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
 import datetime as dt  		   	  			  	 		  		  		    	 		 		   		 		  
 import pandas as pd  		   	  			  	 		  		  		    	 		 		   		 		  
 import util as ut  		   	  			  	 		  		  		    	 		 		   		 		  
-import random  		   	  			  	 		  		  		    	 		 		   		 		  
+import random  		   
+import QLearner as ql	  	
+import indicators	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
 class StrategyLearner(object):  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
@@ -42,23 +44,41 @@ class StrategyLearner(object):
     def addEvidence(self, symbol = "IBM", \
         sd=dt.datetime(2008,1,1), \
         ed=dt.datetime(2009,1,1), \
-        sv = 10000):  		   	  			  	 		  		  		    	 		 		   		 		  
+        sv = 10000):  	
+
+        """
+        3 actions: 1: LONG, 2: CASH, 3: SHORT
+        """   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
-        # add your code to do learning here  		   	  			  	 		  		  		    	 		 		   		 		  
+        # initialize the learner
+        learner = ql.QLearner(num_states=96,\
+        num_actions = 3, \
+        alpha = 0.2, \
+        gamma = 0.9, \
+        rar = 0.98, \
+        radr = 0.999, \
+        dyna = 0, \
+        verbose=False)
+
+        # get indicator data
+        ema_20, ema_30, ema_50, macd, tsi = get_discretized_indicators(sd, ed, symbol)
+
+        # train the learner
+        		  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
-        # example usage of the old backward compatible util function  		   	  			  	 		  		  		    	 		 		   		 		  
-        syms=[symbol]  		   	  			  	 		  		  		    	 		 		   		 		  
-        dates = pd.date_range(sd, ed)  		   	  			  	 		  		  		    	 		 		   		 		  
-        prices_all = ut.get_data(syms, dates)  # automatically adds SPY  		   	  			  	 		  		  		    	 		 		   		 		  
-        prices = prices_all[syms]  # only portfolio symbols  		   	  			  	 		  		  		    	 		 		   		 		  
-        prices_SPY = prices_all['SPY']  # only SPY, for comparison later  		   	  			  	 		  		  		    	 		 		   		 		  
-        if self.verbose: print(prices)  		   	  			  	 		  		  		    	 		 		   		 		  
+        # # example usage of the old backward compatible util function  		   	  			  	 		  		  		    	 		 		   		 		  
+        # syms=[symbol]  		   	  			  	 		  		  		    	 		 		   		 		  
+        # dates = pd.date_range(sd, ed)  		   	  			  	 		  		  		    	 		 		   		 		  
+        # prices_all = ut.get_data(syms, dates)  # automatically adds SPY  		   	  			  	 		  		  		    	 		 		   		 		  
+        # prices = prices_all[syms]  # only portfolio symbols  		   	  			  	 		  		  		    	 		 		   		 		  
+        # prices_SPY = prices_all['SPY']  # only SPY, for comparison later  		   	  			  	 		  		  		    	 		 		   		 		  
+        # if self.verbose: print(prices)  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
-        # example use with new colname  		   	  			  	 		  		  		    	 		 		   		 		  
-        volume_all = ut.get_data(syms, dates, colname = "Volume")  # automatically adds SPY  		   	  			  	 		  		  		    	 		 		   		 		  
-        volume = volume_all[syms]  # only portfolio symbols  		   	  			  	 		  		  		    	 		 		   		 		  
-        volume_SPY = volume_all['SPY']  # only SPY, for comparison later  		   	  			  	 		  		  		    	 		 		   		 		  
-        if self.verbose: print(volume)  		   	  			  	 		  		  		    	 		 		   		 		  
+        # # example use with new colname  		   	  			  	 		  		  		    	 		 		   		 		  
+        # volume_all = ut.get_data(syms, dates, colname = "Volume")  # automatically adds SPY  		   	  			  	 		  		  		    	 		 		   		 		  
+        # volume = volume_all[syms]  # only portfolio symbols  		   	  			  	 		  		  		    	 		 		   		 		  
+        # volume_SPY = volume_all['SPY']  # only SPY, for comparison later  		   	  			  	 		  		  		    	 		 		   		 		  
+        # if self.verbose: print(volume)  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
     # this method should use the existing policy and test it against new data  		   	  			  	 		  		  		    	 		 		   		 		  
     def testPolicy(self, symbol = "IBM", \
@@ -82,7 +102,42 @@ class StrategyLearner(object):
         if self.verbose: print(type(trades)) # it better be a DataFrame!  		   	  			  	 		  		  		    	 		 		   		 		  
         if self.verbose: print(trades)  		   	  			  	 		  		  		    	 		 		   		 		  
         if self.verbose: print(prices_all)  		   	  			  	 		  		  		    	 		 		   		 		  
-        return trades  		   	  			  	 		  		  		    	 		 		   		 		  
-  		   	  			  	 		  		  		    	 		 		   		 		  
+        return trades  		  
+
+
+def get_discretized_indicators(sd, ed, symbol):
+
+    # EMA 2 States: Price <= EMA, Price > EMA
+
+    syms=[symbol]  		   	  			  	 		  		  		    	 		 		   		 		  
+    dates = pd.date_range(sd, ed)  		   	  			  	 		  		  		    	 		 		   		 		  
+    prices_all = ut.get_data(syms, dates)	   	  			  	 		  		  		    	 		 		   		 		  
+    prices = prices_all[syms]
+
+    ema_20 = indicators.ema(sd, ed, symbol, window_size = 20)
+    ema_30 = indicators.ema(sd, ed, symbol, window_size = 30)
+    ema_50 =indicators.ema(sd, ed, symbol, window_size = 50)
+
+    ema_20 = (prices > ema_20) * 1
+    ema_30 = (prices > ema_30) * 1
+    ema_50 = (prices > ema_50) * 1
+
+    # MACD 2 States: MACD <= Signal, MACD > Signal
+    macd_raw, macd_signal = indicators.macd(sd, ed, symbol)
+    macd = (macd_raw > macd_signal) * 1
+
+    # TSI 2 States: TSI <= 0, TSI > 0
+    tsi = indicators.tsi(sd, ed, symbol)
+    tsi = (tsi > 0) * 1
+
+    return ema_20, ema_30, ema_50, macd, tsi
+
+
+def test():
+    learner = StrategyLearner(verbose = False, impact = 0.000) # constructor
+    learner.addEvidence(symbol = "JPM", sd=dt.datetime(2008,1,1), ed=dt.datetime(2008,2,6), sv = 100000)
+
 if __name__=="__main__":  		   	  			  	 		  		  		    	 		 		   		 		  
-    print("One does not simply think up a strategy")  		   	  			  	 		  		  		    	 		 		   		 		  
+    # print("One does not simply think up a strategy")  		   	  			  	 
+
+    test()		  		  		    	 		 		   		 		  
