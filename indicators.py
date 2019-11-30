@@ -74,7 +74,7 @@ def tsi(sd, ed, symbol, plot = False):
 
     # look up history to calculate the ema for the 24 days
     # since the max ema windows size is 20, we can say 50 is safe
-    delta = dt.timedelta(50)
+    delta = dt.timedelta(70)
     extedned_sd = sd - delta
 
     df_price = get_data([symbol], pd.date_range(extedned_sd, ed))
