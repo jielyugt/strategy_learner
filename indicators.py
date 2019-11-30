@@ -34,28 +34,8 @@ def ema(sd, ed, symbol, plot = False, window_size = 20):
 
     # remove history price
     df_ema = df_ema.truncate(before=sd)
-    df_price = df_price.truncate(before=sd)
 
-    # Normalization
-    normalized_df_price = df_price[symbol] / df_price[symbol][0]
-    normalized_df_ema = df_ema[symbol] / df_ema[symbol][0]
-
-    if plot == True:
-        plt.figure(figsize=(14,8))
-
-        plt.title("{} days EMA".format(window_size))
-        plt.xlabel("Date")
-        plt.ylabel("Normalized Pirce")
-        plt.xticks(rotation=30)
-        plt.grid()
-        plt.plot(normalized_df_price, label="normalized price", color = "blue")
-        plt.plot(normalized_df_ema, label="{} days EMA".format(window_size), color = "red")
-        plt.legend()
-        plt.savefig("report/part1_ema.png", bbox_inches='tight')
-        # plt.show()
-        plt.clf()
-
-    return normalized_df_ema
+    return df_ema
 
 
 # MACD: Moving Average Convergence Divergence
@@ -83,42 +63,6 @@ def macd(sd, ed, symbol, plot = False):
     ema_26 = ema_26.truncate(before=sd)
     macd_raw = macd_raw.truncate(before=sd)
     macd_signal = macd_signal.truncate(before=sd)
-
-
-    if plot == True:
-    
-        fig = plt.figure(figsize=(14,8))
-        plt.suptitle("MACD")
-        plt.xlabel("Date")
-        plt.ylabel('normalized price')
-
-        # normalizing price and EMA
-        normalized_ema_12 = ema_12[symbol] / ema_12[symbol][0]
-        normalized_ema_26 = ema_26[symbol] / ema_26[symbol][0]
-        normalized_df_price = df_price[symbol] / df_price[symbol][0]
-
-        ax1 = plt.subplot(211)
-        ax1.plot(normalized_ema_12, label="12 days EMA", color = "orange")
-        ax1.plot(normalized_ema_26, label="26 days EMA", color = "red")
-        ax1.plot(normalized_df_price, label="normalized price", color = "blue")
-        ax1.legend()
-        plt.xlabel("Date")
-        plt.ylabel('Normalized price')
-        ax1.grid()
-
-        ax2 = plt.subplot(212)
-        ax2.plot(macd_raw, label="MACD", color = "orange")
-        ax2.plot(macd_signal, label="MACD Signal", color = "red")
-        ax2.grid()        
-        plt.xlabel("Date")
-        ax2.legend()
-
-        fig.autofmt_xdate()
-
-        plt.savefig("report/part1_macd.png", bbox_inches='tight')
-        # plt.show()
-        plt.clf()
-
     return macd_raw, macd_signal
 
 
@@ -152,64 +96,10 @@ def tsi(sd, ed, symbol, plot = False):
     # remove history price
     df_tsi = df_tsi.truncate(before=sd)
 
-    if plot == True:
-        fig = plt.figure(figsize=(14,8))
-        plt.suptitle("TSI")
-        plt.xlabel("Date")
-        plt.ylabel('Ratio')
-
-        # normalizing price and EMA
-        normalized_df_price = df_price[symbol] / df_price[symbol][0]
-
-        ax1 = plt.subplot(211)
-        ax1.plot(normalized_df_price, label="normalized price", color = "blue")
-        ax1.legend()
-        plt.xlabel("Date")
-        plt.ylabel('Normalized price')
-        ax1.grid()
-
-        ax2 = plt.subplot(212)
-        ax2.plot(df_tsi, label="TSI", color = "orange")
-        ax2.grid()        
-        plt.xlabel("Date")
-        ax2.legend()
-
-        fig.autofmt_xdate()
-
-        plt.savefig("report/part1_tsi.png", bbox_inches='tight')
-        # plt.show()
-        plt.clf()
-
-
     return df_tsi
-
-
-
-
-def report():
-    sd = dt.datetime(2008, 1, 1)
-    ed = dt.datetime(2009,12,31)
-    symbol = 'JPM'
-
-    # sd = dt.datetime(2008, 1, 1)
-    # ed = dt.datetime(2008, 1, 30)
-    # symbol = 'JPM'
-
-    # sd = dt.datetime(2011, 8, 1)
-    # ed = dt.datetime(2012, 9, 1)
-    # symbol = 'NKE'
-
-    # plot ema
-    df_ema = ema(sd, ed, symbol, plot = True, window_size = 20)
-
-    # plot macd
-    df_macd = macd(sd, ed, symbol, plot = True)
-
-    # plot tsi
-    df_tsi = tsi(sd, ed, symbol, plot = True)
 
 def author():
 	return 'jlyu31'
 
 if __name__ == "__main__":
-	report()
+	print("indicates something")
