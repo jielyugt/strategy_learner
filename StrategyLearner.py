@@ -40,14 +40,24 @@ class StrategyLearner(object):
     def __init__(self, verbose = False, impact=0.0):  		   	  			  	 		  		  		    	 		 		   		 		  
         self.verbose = verbose  		   	  			  	 		  		  		    	 		 		   		 		  
         self.impact = impact  
-        random.seed(903329676)		   	  			  	 		  		  		    	 		 		   		 		  
+        random.seed(903329676)	 
+        # initialize the learner
+        # 3 actions: 1: LONG, 2: CASH, 3: SHORT
+        self.learner = ql.QLearner(num_states=96,\
+            num_actions = 3, \
+            alpha = 0.2, \
+            gamma = 0.9, \
+            rar = 0.98, \
+            radr = 0.999, \
+            dyna = 200, \
+            verbose=False)  	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
     # this method should create a QLearner, and train it for trading  		   	  			  	 		  		  		    	 		 		   		 		  
     def addEvidence(self, symbol = "IBM", \
         sd=dt.datetime(2008,1,1), \
         ed=dt.datetime(2009,1,1), \
         sv = 10000):  	
-
+        
         # get indicator data
         ema_20, ema_30, ema_50, macd, tsi = get_discretized_indicators(sd, ed, symbol)
 
@@ -57,19 +67,10 @@ class StrategyLearner(object):
         df_trades[:] = 0
         dates = df_prices.index
 	  	 		  		  		    	 		 		   		 		  			  	 		  		  		    	 		 		   		 		  
-        # initialize the learner
-        # 3 actions: 1: LONG, 2: CASH, 3: SHORT
-        learner = ql.QLearner(num_states=96,\
-            num_actions = 3, \
-            alpha = 0.2, \
-            gamma = 0.9, \
-            rar = 0.98, \
-            radr = 0.999, \
-            dyna = 200, \
-            verbose=False)
 
         curr_position = 0
         curr_cash = sv
+        prev_cash = sv
 
         # train the learner
         for i in range(1, len(dates)):
@@ -79,11 +80,10 @@ class StrategyLearner(object):
             s_prime = compute_current_state(curr_position, ema_20.loc[today], 
                 ema_30.loc[today], ema_50.loc[today], macd.loc[today], tsi.loc[today])
 
-
-            r = curr_position * df_prices.loc[today].loc[symbol] - curr_position * df_prices.loc[yesterday].loc[symbol]
+            r = curr_position * df_prices.loc[today].loc[symbol] + curr_cash - curr_position * df_prices.loc[yesterday].loc[symbol] - prev_cash
 
             # {0: SHORT, 1: CASH, 2: LONG}
-            next_action = learner.query(s_prime, r)
+            next_action = self.learner.query(s_prime, r)
             if next_action == 0:
                 trade = -1000 - curr_position
             elif next_action == 1:
@@ -91,10 +91,13 @@ class StrategyLearner(object):
             else:
                 trade = 1000 - curr_position
             
-            if self.verbose:
-                print(today)
-                print(decode_current_state(s_prime))
-                print("Trade: {}".format(trade))
+            # if self.verbose:
+            #     print("This trade will return: " + str(r))
+            #     print()
+            #     print(today)
+            #     print("Price today: " + str(df_prices.loc[today].loc[symbol]))
+            #     print(decode_current_state(s_prime))
+            #     print("Trade: {}".format(trade))
 
             curr_position += trade
             df_trades.loc[today].loc[symbol] = trade
@@ -104,6 +107,7 @@ class StrategyLearner(object):
             else:
                 impact = -self.impact
             
+            prev_cash = curr_cash
             curr_cash += -df_prices.loc[today].loc[symbol] * (1 + impact) * trade
         
         print("[benchmark]")
@@ -114,6 +118,8 @@ class StrategyLearner(object):
         print(compute_portvals(df_trades, start_val = sv, commission=0, impact=0.000))
         print()
 
+        return df_trades
+
 
   	  			  	 		  		  		    	 		 		   		 		  
     # this method should use the existing policy and test it against new data  		   	  			  	 		  		  		    	 		 		   		 		  
@@ -121,9 +127,54 @@ class StrategyLearner(object):
         sd=dt.datetime(2009,1,1), \
         ed=dt.datetime(2010,1,1), \
         sv = 10000):  		   	  			  	 		  		  		    	 		 		   		 		  
-  		   	  			  	 		  		  		    	 		 		   		 		  
+
+        # get indicator data
+        ema_20, ema_30, ema_50, macd, tsi = get_discretized_indicators(sd, ed, symbol)
+
+        # set up
+        df_prices, df_trades = get_df_prices(sd, ed, symbol)
+        df_trades = df_trades.rename(columns={'SPY': symbol}).astype({symbol: 'int32'})
+        df_trades[:] = 0
+        dates = df_prices.index
+	  	 		  		  		    	 		 		   		 		  			  	 		  		  		    	 		 		   		 		  
+        curr_position = 0
+
+        # train the learner
+        for i in range(1, len(dates)):
+            today = dates[i]
+            yesterday = dates[i - 1]
+
+            s_prime = compute_current_state(curr_position, ema_20.loc[today], 
+                ema_30.loc[today], ema_50.loc[today], macd.loc[today], tsi.loc[today])
+
+            # {0: SHORT, 1: CASH, 2: LONG}
+            next_action = self.learner.querysetstate(s_prime)
+            if next_action == 0:
+                trade = -1000 - curr_position
+            elif next_action == 1:
+                trade = -curr_position
+            else:
+                trade = 1000 - curr_position
+            
+            # if self.verbose:
+            #     print(today)
+            #     print("Price today: " + str(df_prices.loc[today].loc[symbol]))
+            #     print(decode_current_state(s_prime))
+            #     print("Trade: {}".format(trade))
+            #     print()
+
+            curr_position += trade
+            df_trades.loc[today].loc[symbol] = trade
+  
+        print("[benchmark]")
+        print(get_benchmark(sd, ed, sv))
+        print()
+
+        print("[traning performance]")
+        print(compute_portvals(df_trades, start_val = sv, commission=0, impact=0.000))
+        print()  	  			  	 		  		  		    	 		 		   		 		  
 	   	  			  	 		  		  		    	 		 		   		 		  
-        return trades  		  
+        return df_trades  		  
 
 def get_df_prices(sd, ed, symbol):
     syms=[symbol]  		   	  			  	 		  		  		    	 		 		   		 		  
@@ -215,8 +266,12 @@ def get_benchmark(sd, ed, sv):
     return portvals
 
 def test():
-    learner = StrategyLearner(verbose = False, impact = 0.005) # constructor
+    learner = StrategyLearner(verbose = True, impact = 0.005) # constructor
     learner.addEvidence(symbol = "JPM", sd=dt.datetime(2008,1,1), ed=dt.datetime(2009,12,31), sv = 100000)
+    df_trades = learner.testPolicy(symbol = "JPM", sd=dt.datetime(2010,1,1), ed=dt.datetime(2011,12,31), sv = 100000)
+
+def author():
+    return 'jlyu31'
 
 if __name__=="__main__":  		   	  			  	 		  		  		    	 		 		   		 		  
     # print("One does not simply think up a strategy")  	
