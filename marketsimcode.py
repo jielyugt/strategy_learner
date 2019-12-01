@@ -21,8 +21,6 @@ def compute_portvals(orders_df, start_val = 1000000, commission=9.95, impact=0.0
     portvals = get_data(['SPY'], pd.date_range(start_date, end_date), addSPY=True, colname = 'Adj Close')
     portvals = portvals.rename(columns={'SPY': 'value'})
     dates = portvals.index
-    
-    #TODO Modification for Project 6
     symbol = orders_df.columns[0]
 
     ##### my account
@@ -32,9 +30,6 @@ def compute_portvals(orders_df, start_val = 1000000, commission=9.95, impact=0.0
 
     ##### going through dates
     for date in dates:
-
-
-        #TODO Modification for Project 6
         trade = orders_df.loc[date].loc[symbol]
 
         if trade != 0:
