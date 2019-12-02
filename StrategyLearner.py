@@ -49,7 +49,7 @@ class StrategyLearner(object):
             alpha = 0.2, \
             gamma = 0.9, \
             rar = 0.9, \
-            radr = 0.999, \
+            radr = 0.99, \
             dyna = 100, \
             verbose=False)  	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
@@ -163,6 +163,7 @@ class StrategyLearner(object):
             df_trades.loc[today].loc[symbol] = trade
 
         if self.verbose:
+        # if True:
             print("[{} out sample benchmark]".format(symbol))
             print(get_benchmark(sd, ed, sv, self.impact).tail())
             print()
