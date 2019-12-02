@@ -33,12 +33,21 @@ import random
 import QLearner as ql	  	
 import indicators	
 from marketsimcode import compute_portvals  		  		    	 		 		   		 		  
-  		   	  			  	 		  		  		    	 		 		   		 		  
+
+
+def test():
+    symbol = "JPM"
+    learner = StrategyLearner(verbose = True, impact = 0.000) # constructor
+    learner.addEvidence(symbol = symbol, sd=dt.datetime(2008,1,1), ed=dt.datetime(2009,12,31), sv = 100000)
+    df_trades = learner.testPolicy(symbol = symbol, sd=dt.datetime(2010,1,1), ed=dt.datetime(2011,12,31), sv = 100000)
+
+
 class StrategyLearner(object):  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
     # constructor  		   	  			  	 		  		  		    	 		 		   		 		  
     def __init__(self, verbose = False, impact=0.0):  		   	  			  	 		  		  		    	 		 		   		 		  
-        self.verbose = verbose  		   	  			  	 		  		  		    	 		 		   		 		  
+        self.verbose = verbose  
+        # self.verbose = True		   	  			  	 		  		  		    	 		 		   		 		  
         self.impact = impact  
         random.seed(903329676)	 
         # initialize the learner
@@ -47,9 +56,9 @@ class StrategyLearner(object):
             num_actions = 3, \
             alpha = 0.2, \
             gamma = 0.9, \
-            rar = 0.98, \
+            rar = 0.9, \
             radr = 0.999, \
-            dyna = 200, \
+            dyna = 100, \
             verbose=False)  	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
     # this method should create a QLearner, and train it for trading  		   	  			  	 		  		  		    	 		 		   		 		  
@@ -66,10 +75,12 @@ class StrategyLearner(object):
         df_trades = df_trades.rename(columns={'SPY': symbol}).astype({symbol: 'int32'})
         df_trades[:] = 0
         dates = df_prices.index
-	  	 		  		  		    	 		 		   		 		  			  	 		  		  		    	 		 		   		 		  
+        
+        # print(df_prices)
 
         curr_position = 0
         curr_cash = sv
+        prev_position = 0
         prev_cash = sv
 
         # train the learner
@@ -80,7 +91,7 @@ class StrategyLearner(object):
             s_prime = compute_current_state(curr_position, ema_20.loc[today], 
                 ema_30.loc[today], ema_50.loc[today], macd.loc[today], tsi.loc[today])
 
-            r = curr_position * df_prices.loc[today].loc[symbol] + curr_cash - curr_position * df_prices.loc[yesterday].loc[symbol] - prev_cash
+            r = curr_position * df_prices.loc[today].loc[symbol] + curr_cash - prev_position * df_prices.loc[today].loc[symbol] - prev_cash
 
             # {0: SHORT, 1: CASH, 2: LONG}
             next_action = self.learner.query(s_prime, r)
@@ -91,14 +102,20 @@ class StrategyLearner(object):
             else:
                 trade = 1000 - curr_position
             
-            # if self.verbose:
-            #     print("This trade will return: " + str(r))
-            #     print()
-            #     print(today)
-            #     print("Price today: " + str(df_prices.loc[today].loc[symbol]))
-            #     print(decode_current_state(s_prime))
-            #     print("Trade: {}".format(trade))
 
+            if self.verbose:
+                print(today)
+                print("yesterday position: {}".format(prev_position))
+                print("yesterday cash: {}".format(prev_cash))
+                print("today position: {}".format(curr_position))
+                print("today cash: {}".format(curr_cash))
+                print("Price today: " + str(df_prices.loc[today].loc[symbol]))
+                print("Last trade reward: " + str(r))
+                # print(decode_current_state(s_prime))
+                print("Trade: {}".format(trade))
+                print()
+
+            prev_position = curr_position
             curr_position += trade
             df_trades.loc[today].loc[symbol] = trade
 
@@ -110,13 +127,14 @@ class StrategyLearner(object):
             prev_cash = curr_cash
             curr_cash += -df_prices.loc[today].loc[symbol] * (1 + impact) * trade
         
-        print("[benchmark]")
-        print(get_benchmark(sd, ed, sv))
-        print()
+        if self.verbose:
+            print("[{} in sample benchmark]".format(symbol))
+            print(get_benchmark(sd, ed, sv, self.impact).tail())
+            print()
 
-        print("[traning performance]")
-        print(compute_portvals(df_trades, start_val = sv, commission=0, impact=0.000))
-        print()
+            print("[{} IS training performance]".format(symbol))
+            print(compute_portvals(df_trades, start_val = sv, commission=0, impact=0.000).tail())
+            print()
 
         return df_trades
 
@@ -165,14 +183,15 @@ class StrategyLearner(object):
 
             curr_position += trade
             df_trades.loc[today].loc[symbol] = trade
-  
-        print("[benchmark]")
-        print(get_benchmark(sd, ed, sv))
-        print()
 
-        print("[traning performance]")
-        print(compute_portvals(df_trades, start_val = sv, commission=0, impact=0.000))
-        print()  	  			  	 		  		  		    	 		 		   		 		  
+        if self.verbose:
+            print("[{} out sample benchmark]".format(symbol))
+            print(get_benchmark(sd, ed, sv, self.impact).tail())
+            print()
+
+            print("[{} OOS testing performance]".format(symbol))
+            print(compute_portvals(df_trades, start_val = sv, commission=0, impact=0.000).tail())
+            print()  	  			  	 		  		  		    	 		 		   		 		  
 	   	  			  	 		  		  		    	 		 		   		 		  
         return df_trades  		  
 
@@ -255,20 +274,15 @@ def decode_current_state(idx):
         output += "TSI < 0"
     return output
 
-def get_benchmark(sd, ed, sv):
+def get_benchmark(sd, ed, sv, impact):
     # starting with $100,000 cash, investing in 1000 shares of JPM and holding that position
 
     df_trades = ut.get_data(['SPY'], pd.date_range(sd, ed))
     df_trades = df_trades.rename(columns={'SPY': 'JPM'}).astype({'JPM': 'int32'})
     df_trades[:] = 0
     df_trades.loc[df_trades.index[0]] = 1000
-    portvals = compute_portvals(df_trades, sv, commission=0, impact=0.005)
+    portvals = compute_portvals(df_trades, sv, commission=0, impact= impact)
     return portvals
-
-def test():
-    learner = StrategyLearner(verbose = True, impact = 0.005) # constructor
-    learner.addEvidence(symbol = "JPM", sd=dt.datetime(2008,1,1), ed=dt.datetime(2009,12,31), sv = 100000)
-    df_trades = learner.testPolicy(symbol = "JPM", sd=dt.datetime(2010,1,1), ed=dt.datetime(2011,12,31), sv = 100000)
 
 def author():
     return 'jlyu31'
