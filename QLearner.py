@@ -78,11 +78,7 @@ class QLearner(object):
         self.s = s
 
         # choose the next action
-        random = rand.random()
-        if random < self.rar:
-            action = rand.randint(0, self.num_actions - 1)
-        else:
-            action = np.argmax(self.q[s])		   	  			  	 		  		  		    	 		 		   		 		  
+        action = np.argmax(self.q[s])		   	  			  	 		  		  		    	 		 		   		 		  
 		   	  			  	 		  		  		    	 		 		   		 		  
         return action  		   	  			  	 		  		  		    	 		 		   		 		  
   		   	  			  	 		  		  		    	 		 		   		 		  
