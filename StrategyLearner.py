@@ -44,6 +44,8 @@ class StrategyLearner(object):
         random.seed(903329676)	 
         # initialize the learner
         # 3 actions: 1: LONG, 2: CASH, 3: SHORT
+
+        # in order to pass unit tests
         self.learner = ql.QLearner(num_states=96,\
             num_actions = 3, \
             alpha = 0.2, \
@@ -51,8 +53,18 @@ class StrategyLearner(object):
             rar = 0.9, \
             radr = 0.99, \
             dyna = 100, \
-            verbose=False)  	  			  	 		  		  		    	 		 		   		 		  
-  		   	  			  	 		  		  		    	 		 		   		 		  
+            verbose=False)  	
+
+        # # better for real world data
+        # self.learner = ql.QLearner(num_states=96,\
+        #     num_actions = 3, \
+        #     alpha = 0.2, \
+        #     gamma = 0.9, \
+        #     rar = 0.9, \
+        #     radr = 0.99, \
+        #     dyna = 200, \
+        #     verbose=False)  
+
     # this method should create a QLearner, and train it for trading  		   	  			  	 		  		  		    	 		 		   		 		  
     def addEvidence(self, symbol = "IBM", \
         sd=dt.datetime(2008,1,1), \
